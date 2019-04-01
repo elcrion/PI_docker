@@ -1,0 +1,69 @@
+version: '3'
+services:
+  db:
+  
+    image: postgres:9.6
+    command:
+      - /bin/bash
+      - -c
+      - echo "$$POSTGRES_INITDB" > /docker-entrypoint-initdb.d/commands.sh &&
+        chmod +x /docker-entrypoint-initdb.d/commands.sh &&
+        /docker-entrypoint.sh postgres
+    ports:
+      - "5432"
+    environment:
+      POSTGRES_DB: lookit
+      POSTGRES_INITDB: |
+        sed -i -e 's/max_connections.*/max_connections = 5000/' /var/lib/postgresql/data/postgresql.conf
+        sed -i -e 's/#log_min_duration_statement = .*/log_min_duration_statement = 1000/' /var/lib/postgresql/data/postgresql.conf
+    volumes:
+      - "${POSTGRES_DATA_VOL:-postgres_data_vol}:/var/lib/postgresql/data/"
+    stdin_open: true
+    networks: 
+      - lookit-network
+
+
+  ember:
+     build: ember_build/.
+     image: glyakovlev/current_docker_ember:dev
+     working_dir: /ember-lookit-frameplayer
+     command: 
+      - /bin/bash
+      - -c
+      - yarn install --pure-lockfile && bower install --allow-root && ember serve
+     volumes:
+       - ./ember-lookit-frameplayer/:/ember-lookit-frameplayer/
+       - ./.env:/ember-lookit-frameplayer/.env
+     depends_on:
+       - lookit
+     ports: 
+       - "4200:4200"
+     stdin_open: true    
+     networks: 
+       - lookit-network
+
+  lookit:
+    #build: lookit-api/.
+    image: glyakovlev/current_docker_lookit:dev
+    command: bash -c "python manage.py migrate && python manage.py runserver 0.0.0.0:8000"
+    environment:
+      DB_HOST: db
+    ports: 
+      - "8000:8000"
+    volumes:
+      - .:/app/
+    depends_on:
+      - db
+    stdin_open: true
+    tty: true
+    networks: 
+      - lookit-network
+
+  
+
+networks:
+  lookit-network:
+    driver: bridge
+volumes:
+  postgres_data_vol:
+    external: false

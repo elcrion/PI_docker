@@ -1,0 +1,6 @@
+[submodule "ember-lookit-frameplayer"]
+	path = ember-lookit-frameplayer
+	url = https://github.com/elcrion/ember-lookit-frameplayer.git
+[submodule "lookit-api"]
+	path = lookit-api
+	url = https://github.com/lookit/lookit-api.git
